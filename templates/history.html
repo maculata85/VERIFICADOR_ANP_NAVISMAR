@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de Observaciones{% endblock %}
+
+{% block content %}
+    <h1>Historial de Observaciones</h1>
+
+    <div class="form-group">
+        <a href="{{ url_for('index') }}" class="button back-button" onclick="window.showLoadingSpinner('Volviendo a la Página Principal...');">Volver a la Página Principal</a>
+    </div>
+
+    {# Formulario de búsqueda #}
+    <form action="{{ url_for('history') }}" method="GET" onsubmit="window.showLoadingSpinner('Buscando historial...');"> {# Añadido onsubmit #}
+        <h2>Buscar Observaciones Existentes</h2>
+        <div class="form-group">
+            <label for="search_matricula">Buscar por Matrícula:</label>
+            <input type="text" id="search_matricula" name="matricula" value="{{ matricula if matricula else '' }}" list="matricula_suggestions">
+            <datalist id="matricula_suggestions"></datalist>
+        </div>
+        <div class="form-group">
+            <label for="search_nombre_embarcacion">Buscar por Nombre de Embarcación:</label>
+            <input type="text" id="search_nombre_embarcacion" name="nombre_embarcacion" value="{{ nombre_embarcacion if nombre_embarcacion else '' }}" list="nombre_embarcacion_suggestions">
+            <datalist id="nombre_embarcacion_suggestions"></datalist>
+        </div>
+        <div class="form-group">
+            <label for="search_nombre_patron">Buscar por Nombre del Patrón:</label>
+            <input type="text" id="search_nombre_patron" name="nombre_patron" value="{{ nombre_patron if nombre_patron else '' }}" list="nombre_patron_suggestions">
+            <datalist id="nombre_patron_suggestions"></datalist>
+        </div>
+        <button type="submit">Buscar Historial</button>
+    </form>
+
+    <hr> {# Separador visual #}
+
+    {% if map_image %}
+        <div class="map-container">
+            <h2>Mapa de Observaciones</h2>
+            <img src="data:image/png;base64,{{ map_image }}" alt="Mapa de Observaciones">
+        </div>
+        {% if observations %}
+            <a href="{{ url_for('download_report', matricula=observations[0].matricula) }}" class="button primary-button" download onclick="window.showLoadingSpinner('Generando reporte DOCX...');">Descargar Reporte DOCX</a> {# Añadido onclick #}
+        {% endif %}
+    {% endif %}
+
+    {% if observations %}
+        <h2>Detalle de Observaciones</h2>
+        <div class="observation-list">
+            {% for obs in observations %}
+                <div class="observation-item">
+                    <p><strong>ID DB:</strong> {{ obs.id }}</p>
+                    <p><strong>Matrícula:</strong> {{ obs.matricula }}</p>
+                    <p><strong>Nombre Embarcación:</strong> {{ obs.nombre_embarcacion }}</p>
+                    <p><strong>Patrón:</strong> {{ obs.nombre_patron or 'N/A' }}</p>
+                    <p><strong>Timestamp:</strong> {{ obs.timestamp }}</p>
+                    <p><strong>Latitud:</strong> {{ obs.latitud_wgs84 }}</p>
+                    <p><strong>Longitud:</strong> {{ obs.longitud_wgs84 }}</p>
+                    <p><strong>Tipo Embarcación:</strong> {{ vessel_types[obs.tipo_embarcacion_id]['desc'] if obs.tipo_embarcacion_id in vessel_types else 'Desconocido' }}</p>
+                    <p><strong>Estatus:</strong> 
+                        {% if obs.estatus_categoria_id == 'outside_anp' %}
+                            Fuera del Polígono ANP
+                        {% else %}
+                            {% if obs.estatus_categoria_id in status_categories %}{# Usar in para verificar si el ID existe #}
+                                {{ status_categories[obs.estatus_categoria_id]['desc'] }}
+                            {% else %}
+                                Estatus Desconocido
+                            {% endif %}
+                        {% endif %}
+                    </p>
+                    <p><strong>Notas:</strong> {{ obs.notas_adicionales or 'N/A' }}</p>
+                    {# Botones de Acción: Editar y Eliminar #}
+                    <div class="button-group">
+                        {% if current_user.has_role('editor') %} {# Solo editores y admins pueden editar #}
+                            <a href="{{ url_for('edit_observation', obs_id=obs.id) }}" class="button secondary-button small-button"
+                               onclick="window.showLoadingSpinner('Cargando observación para editar...');">Editar</a>
+                        {% endif %}
+                        {% if current_user.has_role('editor') %} {# Solo editores y admins pueden eliminar #}
+                            <button type="button" class="button delete-button small-button" 
+                                    data-obs-id="{{ obs.id }}" 
+                                    data-matricula-redirect="{{ matricula }}"
+                                    onclick="window.showConfirmModal(this, this.dataset.obsId, this.dataset.matriculaRedirect)"> 
+                                Eliminar
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% elif not message %}
+        <p>No se encontraron observaciones para la matrícula o nombre/patrón proporcionado.</p>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }} {# Importa scripts de base.html (incluyendo lógica de confirmModal, loadingSpinner y showCustomError) #}
+    <script>
+        console.log("history.html script cargado."); // DEBUG: Confirmar carga
+
+        // --- Lógica de autocompletado (Copiado de index.html) ---
+        async function fetchSuggestions(query) {
+            if (query.length < 2) {
+                return [];
+            }
+            try {
+                const response = await fetch(`/api/search_suggestions?q=${encodeURIComponent(query)}`);
+                if (!response.ok) {
+                    console.error('Error fetching suggestions:', response.statusText);
+                    return [];
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching suggestions:', error);
+                return [];
+            }
+        }
+
+        function setupDatalist(inputId, datalistId) {
+            const inputElement = document.getElementById(inputId);
+            const datalistElement = document.getElementById(datalistId);
+
+            let debounceTimer;
+            inputElement.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(async () => {
+                    const query = inputElement.value;
+                    const suggestions = await fetchSuggestions(query);
+                    
+                    datalistElement.innerHTML = '';
+                    suggestions.forEach(suggestion => {
+                        const option = document.createElement('option');
+                        option.value = suggestion;
+                        datalistElement.appendChild(option);
+                    });
+                }, 300); // Retraso de 300ms
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOMContentLoaded disparado en history.html."); // DEBUG: Confirmar DOM ready
+            window.hideLoadingSpinner(); // Ocultar el spinner al cargar la página
+
+            // Configurar los campos de autocompletado
+            setupDatalist('search_matricula', 'matricula_suggestions');
+            setupDatalist('search_nombre_embarcacion', 'nombre_embarcacion_suggestions');
+            setupDatalist('search_nombre_patron', 'nombre_patron_suggestions');
+        });
+    </script>
+{% endblock %}

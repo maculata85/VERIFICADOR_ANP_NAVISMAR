@@ -1,0 +1,11 @@
+Flask
+matplotlib
+shapely
+pyproj
+numpy
+contextily
+python-docx
+gunicorn
+psycopg2-binary
+Flask-Login
+Werkzeug

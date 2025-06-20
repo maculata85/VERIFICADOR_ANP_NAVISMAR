@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Administración{% endblock %}
+
+{% block content %}
+    <h1>Panel de Administración</h1>
+    <p>Bienvenido al panel de administración. Aquí puedes gestionar usuarios y otras configuraciones.</p>
+
+    <div class="button-group">
+        <a href="{{ url_for('admin_users') }}" class="button primary-button" onclick="window.showLoadingSpinner('Cargando usuarios...');">Gestionar Usuarios</a> {# Añadido onclick #}
+        {# Más enlaces de administración si se añaden en el futuro #}
+    </div>
+
+    <a href="{{ url_for('index') }}" class="button back-button" style="margin-top: 20px;" onclick="window.showLoadingSpinner('Volviendo al inicio...');">Volver al Inicio</a> {# Añadido onclick #}
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            window.hideLoadingSpinner(); // Ocultar el spinner al cargar la página
+        });
+    </script>
+{% endblock %}

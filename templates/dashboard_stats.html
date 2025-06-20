@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Estadísticas y Anomalías{% endblock %}
+
+{% block head_extra %}
+    {{ super() }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .stat-card h3 {
+            color: #0056b3;
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .stat-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .stat-card ul li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .stat-card ul li:last-child {
+            border-bottom: none;
+        }
+        .stat-card canvas {
+            max-width: 100%;
+            height: auto;
+        }
+        .anomaly-item {
+            background-color: #ffe0b2; /* Un color suave para destacar anomalías */
+            border: 1px solid #ffcc80;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .anomaly-item strong {
+            color: #e65100; /* Naranja más fuerte para el texto importante */
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <h1>Panel de Estadísticas y Anomalías</h1>
+
+    <div class="stats-grid">
+        {# Gráfico de Observaciones por Mes/Año #}
+        <div class="stat-card">
+            <h3>Observaciones por Mes/Año</h3>
+            <canvas id="monthlyObservationsChart"></canvas>
+        </div>
+
+        {# Gráfico de Distribución de Estatus #}
+        <div class="stat-card">
+            <h3>Distribución de Estatus</h3>
+            <canvas id="statusDistributionChart"></canvas>
+        </div>
+
+        {# Listado de Embarcaciones Recurrentes #}
+        <div class="stat-card">
+            <h3>Top 5 Embarcaciones Más Recurrentes</h3>
+            {% if top_recurrent_vessels %}
+                <ul>
+                    {% for vessel in top_recurrent_vessels %}
+                        <li><strong>{{ vessel.matricula }}</strong>: {{ vessel.count }} observaciones</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No hay datos de embarcaciones recurrentes.</p>
+            {% endif %}
+        </div>
+
+        {# Listado de Alertas por Estatus Repetido (Anomalías) #}
+        <div class="stat-card">
+            <h3>Alertas: Embarcaciones con Infracción/Delito Recurrente</h3>
+            {% if repeated_infraction_vessels %}
+                <ul>
+                    {% for vessel in repeated_infraction_vessels %}
+                        <li class="anomaly-item">
+                            <strong>Matrícula: {{ vessel.matricula }}</strong><br>
+                            Conteo de Infracciones: {{ vessel.infraction_count }}<br>
+                            Última Detección: {{ vessel.last_infraction_date }}<br>
+                            Estatus Detectados: {{ vessel.all_status_descriptions | join(', ') }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No se encontraron embarcaciones con infracciones o delitos repetidos.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="button-group" style="margin-top: 30px;">
+        <a href="{{ url_for('index') }}" class="button back-button">Volver al Inicio</a>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            window.hideLoadingSpinner(); // Ocultar el spinner al cargar la página
+
+            // Datos para el gráfico de Observaciones por Mes/Año
+            const monthlyData = {{ monthly_data | tojson }};
+            const monthlyLabels = Object.keys(monthlyData).sort();
+            const monthlyCounts = monthlyLabels.map(key => monthlyData[key]);
+
+            if (monthlyLabels.length > 0) {
+                new Chart(document.getElementById('monthlyObservationsChart'), {
+                    type: 'line',
+                    data: {
+                        labels: monthlyLabels,
+                        datasets: [{
+                            label: 'Número de Observaciones',
+                            data: monthlyCounts,
+                            borderColor: 'rgb(75, 192, 192)',
+                            tension: 0.1,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'No. de Observaciones'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Mes/Año'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        const label = context[0].label;
+                                        const [year, monthNum] = label.split('-');
+                                        const monthNames = [
+                                            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                                            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                                        ];
+                                        return monthNames[parseInt(monthNum) - 1] + ' ' + year;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('monthlyObservationsChart').insertAdjacentHTML('afterend', '<p style="text-align: center;">No hay datos de observaciones mensuales disponibles.</p>');
+                document.getElementById('monthlyObservationsChart').style.display = 'none';
+            }
+
+
+            // Datos para el gráfico de Distribución de Estatus
+            const statusLabels = {{ status_labels | tojson }}; // Ya preprocesados en Python
+            const statusData = {{ status_data | tojson }};
+
+            // Filtrar etiquetas y datos para no mostrar categorías con 0 observaciones
+            const filteredStatusLabels = [];
+            const filteredStatusData = [];
+            for (let i = 0; i < statusData.length; i++) {
+                if (statusData[i] > 0) {
+                    filteredStatusLabels.push(statusLabels[i]);
+                    filteredStatusData.push(statusData[i]);
+                }
+            }
+
+
+            if (filteredStatusLabels.length > 0) {
+                new Chart(document.getElementById('statusDistributionChart'), {
+                    type: 'pie',
+                    data: {
+                        labels: filteredStatusLabels,
+                        datasets: [{
+                            data: filteredStatusData,
+                            backgroundColor: [
+                                'rgba(255, 255, 255, 0.7)', // blanco
+                                'rgba(0, 128, 0, 0.7)',    // verde
+                                'rgba(0, 0, 139, 0.7)',    // azul_marino
+                                'rgba(255, 255, 0, 0.7)',  // amarillo
+                                'rgba(255, 165, 0, 0.7)',  // anaranjado
+                                'rgba(255, 0, 0, 0.7)',    // rojo
+                                'rgba(30, 144, 255, 0.7)', // deepskyblue (outside_anp)
+                                'rgba(128, 128, 128, 0.7)' // lightgray (unknown_status)
+                            ],
+                            borderColor: '#fff',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 20
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed + ' (' + ((context.parsed / context.dataset.data.reduce((a,b) => a + b, 0)) * 100).toFixed(1) + '%)';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('statusDistributionChart').insertAdjacentHTML('afterend', '<p style="text-align: center;">No hay datos de distribución de estatus disponibles.</p>');
+                document.getElementById('statusDistributionChart').style.display = 'none';
+            }
+        });
+    </script>
+{% endblock %}

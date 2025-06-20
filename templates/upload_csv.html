@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Subir CSV a Base de Datos{% endblock %}
+
+{% block content %}
+    <h1>Subir Archivo CSV a la Base de Datos</h1>
+
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_csv_to_db') }}" onsubmit="window.showLoadingSpinner('Subiendo y sincronizando CSV...');"> {# Añadido onsubmit #}
+        <div class="form-group">
+            <label for="csv_file">Seleccionar archivo CSV (exportado desde la App de Escritorio):</label>
+            <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
+        </div>
+        {# Opcional: Checkbox para vaciar la tabla antes de importar #}
+        {# Si decides implementar la lógica de vaciar tabla en Flask (en app.py), descomenta este bloque:
+        <div class="checkbox-group">
+            <input type="checkbox" id="clear_table" name="clear_table">
+            <label for="clear_table">Vaciar tabla de observaciones antes de importar (¡CUIDADO!)</label>
+        </div>
+        #}
+        <button type="submit">Subir y Sincronizar</button>
+    </form>
+
+    <a href="{{ url_for('index') }}" class="button back-button" style="margin-top: 20px;">Volver al Inicio</a>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            window.hideLoadingSpinner(); // Ocultar el spinner al cargar la página
+        });
+    </script>
+{% endblock %}

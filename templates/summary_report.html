@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}{{ map_title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ map_title }}</h1>
+
+    {% if message %}
+        <p class="message">{{ message }}</p>
+    {% endif %}
+
+    {% if map_image %}
+        <div class="map-container">
+            <h2>Mapa del Resumen</h2>
+            <img src="data:image/png;base64,{{ map_image }}" alt="Mapa de Resumen">
+        </div>
+        {% if observations %}
+            <div class="button-group" style="margin-top: 20px; margin-bottom: 30px;">
+                {# El botón de descarga del reporte DOCX de resumen también debe mostrar el spinner #}
+                <a href="{{ url_for('download_summary_report', 
+                            report_type=request.args.get('report_type'), 
+                            year=request.args.get('year'), 
+                            month=request.args.get('month'), 
+                            week_num_option=request.args.get('week_num_option'), 
+                            status_category=request.args.get('status_category')) }}" 
+                   class="button primary-button" download 
+                   onclick="window.showLoadingSpinner('Generando reporte DOCX...');">Descargar Reporte DOCX de Resumen</a>
+                
+                {# Nuevo botón para descargar el CSV de resumen filtrado #}
+                <a href="{{ url_for('download_summary_csv', 
+                            report_type=request.args.get('report_type'), 
+                            year=request.args.get('year'), 
+                            month=request.args.get('month'), 
+                            week_num_option=request.args.get('week_num_option'), 
+                            status_category=request.args.get('status_category')) }}" 
+                   class="button secondary-button" download 
+                   onclick="window.showLoadingSpinner('Generando reporte CSV...');" style="margin-left: 10px;">Descargar Reporte CSV de Resumen</a>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    {% if observations %}
+        <h2>Detalle de Observaciones en el Resumen</h2>
+        <div class="observation-list">
+            {% for obs in observations %}
+                <div class="observation-item">
+                    <p><strong>ID DB:</strong> {{ obs.id }}</p>
+                    <p><strong>Matrícula:</strong> {{ obs.matricula }}</p>
+                    <p><strong>Nombre Embarcación:</strong> {{ obs.nombre_embarcacion }}</p>
+                    <p><strong>Patrón:</strong> {{ obs.nombre_patron or 'N/A' }}</p>
+                    <p><strong>Timestamp:</strong> {{ obs.timestamp }}</p>
+                    <p><strong>Latitud:</strong> {{ obs.latitud_wgs84 }}</p>
+                    <p><strong>Longitud:</strong> {{ obs.longitud_wgs84 }}</p>
+                    <p><strong>Tipo Embarcación:</strong> {{ vessel_types[obs.tipo_embarcacion_id]['desc'] if obs.tipo_embarcacion_id in vessel_types else 'Desconocido' }}</p>
+                    <p><strong>Estatus:</strong> 
+                        {% if obs.estatus_categoria_id == 'outside_anp' %}
+                            Fuera del Polígono ANP
+                        {% else %}
+                            {% if obs.estatus_categoria_id in status_categories %}
+                                {{ status_categories[obs.estatus_categoria_id]['desc'] }}
+                            {% else %}
+                                Estatus Desconocido
+                            {% endif %}
+                        {% endif %}
+                    </p>
+                    <p><strong>Notas:</strong> {{ obs.notas_adicionales or 'N/A' }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% elif not message %}
+        <p>No se encontraron observaciones para el período especificado.</p>
+    {% endif %}
+
+    <div class="button-group" style="margin-top: 20px;">
+        <a href="{{ url_for('summary_options') }}" class="button back-button" onclick="window.showLoadingSpinner('Volviendo a Opciones de Resumen...');">Volver a Opciones de Resumen</a>
+        <a href="{{ url_for('index') }}" class="button back-button" style="margin-left: 10px;" onclick="window.showLoadingSpinner('Volviendo al Inicio...');">Volver al Inicio</a>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            window.hideLoadingSpinner(); // Ocultar el spinner al cargar la página
+        });
+    </script>
+{% endblock %}

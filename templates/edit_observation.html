@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Observación{% endblock %}
+
+{% block content %}
+    <h1>Editar Observación #{{ observation.id }}</h1>
+
+    <form action="{{ url_for('update_observation', obs_id=observation.id) }}" method="POST" onsubmit="return validateForm()">
+        <div class="form-group">
+            <label for="matricula">Matrícula:</label>
+            <input type="text" id="matricula" name="matricula" value="{{ observation.matricula }}" required>
+        </div>
+        <div class="form-group">
+            <label for="nombre_embarcacion">Nombre de la Embarcación:</label>
+            <input type="text" id="nombre_embarcacion" name="nombre_embarcacion" value="{{ observation.nombre_embarcacion or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="nombre_patron">Nombre del Patrón/Capitán (Opcional):</label>
+            <input type="text" id="nombre_patron" name="nombre_patron" value="{{ observation.nombre_patron or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="timestamp">Fecha y Hora de Avistamiento:</label>
+            {# Usamos observation.timestamp_formatted que ya viene listo de app.py #}
+            <input type="datetime-local" id="timestamp" name="timestamp" value="{{ observation.timestamp_formatted }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Formato de Coordenadas:</label>
+            <select id="coord_format" name="coord_format" onchange="toggleCoordInputs()">
+                <option value="dd" {% if observation.coord_format == 'dd' %}selected{% endif %}>Grados Decimales (DD)</option>
+                <option value="gms" {% if observation.coord_format == 'gms' %}selected{% endif %}>Grados, Minutos, Segundos (GMS)</option>
+                <option value="gdm" {% if observation.coord_format == 'gdm' %}selected{% endif %}>Grados, Minutos Decimales (GDM)</option>
+                <option value="utm" {% if observation.coord_format == 'utm' %}selected{% endif %}>UTM (Universal Transverse Mercator)</option>
+            </select>
+        </div>
+
+        {# DD Coords - Siempre se rellenan, aunque no se muestren #}
+        <div id="dd_coords" class="coord-inputs">
+            <div class="form-group-inline">
+                <label for="lat_dd">Latitud (DD):</label>
+                <input type="number" step="any" id="lat_dd" name="lat_dd" placeholder="Ej. 20.12345" value="{{ observation.latitud_wgs84 }}">
+            </div>
+            <div class="form-group-inline">
+                <label for="lon_dd">Longitud (DD):</label>
+                <input type="number" step="any" id="lon_dd" name="lon_dd" placeholder="Ej. -105.67890" value="{{ observation.longitud_wgs84 }}">
+            </div>
+        </div>
+
+        {# GMS Coords - No hay GMS directamente en la DB, se usa DD para inicializar #}
+        <div id="gms_coords" class="coord-inputs" style="display:none;">
+            <label>Latitud (GMS):</label>
+            <div class="form-group-inline">
+                <input type="number" name="lat_g" placeholder="Grados" min="0" max="90">°
+                <input type="number" name="lat_m" placeholder="Minutos" min="0" max="59">′
+                <input type="number" step="any" name="lat_s" placeholder="Segundos" min="0" max="59.999">″
+                <select name="lat_h">
+                    <option value="N">N</option><option value="S">S</option>
+                </select>
+            </div>
+            <label>Longitud (GMS):</label>
+            <div class="form-group-inline">
+                <input type="number" name="lon_g" placeholder="Grados" min="0" max="180">°
+                <input type="number" name="lon_m" placeholder="Minutos" min="0" max="59">′
+                <input type="number" step="any" name="lon_s" placeholder="Segundos" min="0" max="59.999">″
+                <select name="lon_h">
+                    <option value="W">W</option><option value="E">E</option>
+                </select>
+            </div>
+        </div>
+
+        {# GDM Coords - No hay GDM directamente en la DB, se usa DD para inicializar #}
+        <div id="gdm_coords" class="coord-inputs" style="display:none;">
+            <label>Latitud (GDM):</label>
+            <div class="form-group-inline">
+                <input type="number" name="lat_g_gdm" placeholder="Grados" min="0" max="90">°
+                <input type="number" step="any" name="lat_m_gdm" placeholder="Minutos Dec." min="0" max="59.999">′
+                <select name="lat_h_gdm">
+                    <option value="N">N</option><option value="S">S</option>
+                </select>
+            </div>
+            <label>Longitud (GDM):</label>
+            <div class="form-group-inline">
+                <input type="number" name="lon_g_gdm" placeholder="Grados" min="0" max="180">°
+                <input type="number" step="any" name="lon_m_gdm" placeholder="Minutos Dec." min="0" max="59.999">′
+                <select name="lon_h_gdm">
+                    <option value="W">W</option><option value="E">E</option>
+                </select>
+            </div>
+        </div>
+
+        {# UTM Coords - No hay UTM directamente en la DB, se usa DD para inicializar #}
+        <div id="utm_coords" class="coord-inputs" style="display:none;">
+            <div class="form-group-inline">
+                <label for="utm_x">Coordenada X (UTM):</label>
+                {# Los valores UTM se calculan en JS, no vienen de la DB directamente #}
+                <input type="number" step="any" id="utm_x" name="utm_x" placeholder="Este (Easting)" >
+            </div>
+            <div class="form-group-inline">
+                <label for="utm_y">Coordenada Y (UTM):</label>
+                <input type="number" step="any" id="utm_y" name="utm_y" placeholder="Norte (Northing)" >
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="vessel_type">Tipo de Embarcación:</label>
+            <select id="vessel_type" name="vessel_type">
+                {% for key, value in vessel_types.items() %}
+                    <option value="{{ value.id }}" {% if observation.tipo_embarcacion_id == value.id %}selected{% endif %}>{{ value.desc }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="status_category">Estatus de Categoría (si está DENTRO del ANP):</label>
+            <select id="status_category" name="status_category">
+                {% for key, value in status_categories.items() %}
+                    <option value="{{ value.id }}" {% if observation.estatus_categoria_id == value.id %}selected{% endif %}>{{ value.desc }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="notas_adicionales">Notas Adicionales:</label>
+            <textarea id="notas_adicionales" name="notas_adicionales" rows="3">{{ observation.notas_adicionales or '' }}</textarea>
+        </div>
+
+        <button type="submit">Actualizar Observación</button>
+    </form>
+
+    <div class="button-group" style="margin-top: 20px;">
+        <a href="{{ url_for('history', matricula=observation.matricula) }}" class="button back-button">Volver al Historial</a>
+        <a href="{{ url_for('index') }}" class="button back-button" style="margin-left: 10px;">Volver a Registrar Nueva Obs.</a>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }} {# Importa scripts de base.html (incluyendo lógica de confirmModal y loadingSpinner) #}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.min.js"></script> {# Proj4js para conversiones UTM #}
+    <script>
+        // Configurar Proj4js para UTM Zone 13N si no está ya definido
+        // Asumiendo que la zona UTM para el ANP es 13N (EPSG:32613)
+        if (!proj4.defs["EPSG:32613"]) {
+            proj4.defs("EPSG:32613", "+proj=utm +zone=13 +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
+        }
+        // Definir WGS84 (lat/lon) si no está ya definido
+        if (!proj4.defs["EPSG:4326"]) {
+            proj4.defs("EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs");
+        }
+
+        // Función para mostrar mensajes de error personalizados (reutilizado de index.html)
+        function showCustomError(message) {
+            const modal = document.getElementById('confirmModal');
+            const modalContent = modal.querySelector('.modal-content');
+            const modalText = modalContent.querySelector('p');
+            const modalButtons = modalContent.querySelector('.modal-buttons');
+            const modalStandaloneButtonContainer = modal.querySelector('.modal-standalone-button-container');
+
+            modalText.textContent = message;
+            modalButtons.style.display = 'none';
+            modalStandaloneButtonContainer.style.display = 'block';
+            
+            modal.classList.add('modal-active');
+        }
+
+        // Función para validar el formulario antes del envío (adaptada para edición)
+        function validateForm() {
+            const coordFormat = document.getElementById('coord_format').value;
+            let isValid = true;
+            let errorMessage = '';
+
+            // Limpiar los atributos 'required' de todos los inputs de coordenadas antes de validar
+            document.querySelectorAll('.coord-inputs input:not([type="hidden"]), .coord-inputs select').forEach(function(input) {
+                input.removeAttribute('required');
+            });
+
+            // Reaplicar 'required' y validar solo para el formato activo
+            const activeCoordDiv = document.getElementById(coordFormat + '_coords');
+            if (activeCoordDiv) {
+                activeCoordDiv.querySelectorAll('input:not([type="hidden"]), select').forEach(function(input) {
+                    input.setAttribute('required', 'required');
+                });
+            }
+
+            switch (coordFormat) {
+                case 'dd':
+                    const latDd = parseFloat(document.getElementById('lat_dd').value);
+                    const lonDd = parseFloat(document.getElementById('lon_dd').value);
+                    if (isNaN(latDd) || latDd < -90 || latDd > 90) {
+                        errorMessage = 'Latitud (DD) debe estar entre -90 y 90.';
+                        isValid = false;
+                    } else if (isNaN(lonDd) || lonDd < -180 || lonDd > 180) {
+                        errorMessage = 'Longitud (DD) debe estar entre -180 y 180.';
+                        isValid = false;
+                    }
+                    break;
+                case 'gms':
+                    const latG = parseInt(document.querySelector('#gms_coords input[name="lat_g"]').value);
+                    const latM = parseInt(document.querySelector('#gms_coords input[name="lat_m"]').value);
+                    const latS = parseFloat(document.querySelector('#gms_coords input[name="lat_s"]').value);
+                    const lonG = parseInt(document.querySelector('#gms_coords input[name="lon_g"]').value);
+                    const lonM = parseInt(document.querySelector('#gms_coords input[name="lon_m"]').value);
+                    const lonS = parseFloat(document.querySelector('#gms_coords input[name="lon_s"]').value);
+
+                    if (isNaN(latG) || latG < 0 || latG > 90 ||
+                        isNaN(latM) || latM < 0 || latM > 59 ||
+                        isNaN(latS) || latS < 0 || latS >= 60) {
+                        errorMessage = 'Valores de Latitud (GMS) inválidos. Grados 0-90, Minutos 0-59, Segundos 0-59.999.';
+                        isValid = false;
+                    } else if (isNaN(lonG) || lonG < 0 || lonG > 180 ||
+                               isNaN(lonM) || lonM < 0 || lonM > 59 ||
+                               isNaN(lonS) || lonS < 0 || lonS >= 60) {
+                        errorMessage = 'Valores de Longitud (GMS) inválidos. Grados 0-180, Minutos 0-59, Segundos 0-59.999.';
+                        isValid = false;
+                    }
+                    break;
+                case 'gdm':
+                    const latGdmG = parseInt(document.querySelector('#gdm_coords input[name="lat_g_gdm"]').value);
+                    const latGdmM = parseFloat(document.querySelector('#gdm_coords input[name="lat_m_gdm"]').value);
+                    const lonGdmG = parseInt(document.querySelector('#gdm_coords input[name="lon_g_gdm"]').value);
+                    const lonGdmM = parseFloat(document.querySelector('#gdm_coords input[name="lon_m_gdm"]').value);
+
+                    if (isNaN(latGdmG) || latGdmG < 0 || latGdmG > 90 ||
+                        isNaN(latGdmM) || latGdmM < 0 || latGdmM >= 60) {
+                        errorMessage = 'Valores de Latitud (GDM) inválidos. Grados 0-90, Minutos Decimales 0-59.999.';
+                        isValid = false;
+                    } else if (isNaN(lonGdmG) || lonGdmG < 0 || lonGdmG > 180 ||
+                               isNaN(lonGdmM) || lonGdmM < 0 || lonGdmM >= 60) {
+                        errorMessage = 'Valores de Longitud (GDM) inválidos. Grados 0-180, Minutos Decimales 0-59.999.';
+                        isValid = false;
+                    }
+                    break;
+                case 'utm':
+                    const utmX = parseFloat(document.getElementById('utm_x').value);
+                    const utmY = parseFloat(document.getElementById('utm_y').value);
+                    if (isNaN(utmX) || isNaN(utmY) || utmX === 0 || utmY === 0) {
+                        errorMessage = 'Coordenadas UTM (Este y Norte) no pueden estar vacías o ser cero.';
+                        isValid = false;
+                    }
+                    break;
+            }
+
+            if (!isValid) {
+                showCustomError(errorMessage);
+                return false;
+            }
+
+            window.showLoadingSpinner("Actualizando observación...");
+            return true;
+        }
+
+        // Función para controlar la visibilidad de los inputs de coordenadas
+        // y para convertir de DD a otros formatos si es necesario
+        function toggleCoordInputs() {
+            var format = document.getElementById('coord_format').value;
+            var coordInputs = document.querySelectorAll('.coord-inputs');
+            
+            // Oculta todos los inputs de coordenadas
+            coordInputs.forEach(function(div) {
+                div.style.display = 'none';
+                div.querySelectorAll('input:not([type="hidden"]), select').forEach(function(input) {
+                    input.removeAttribute('required'); // Eliminar required de los no activos
+                });
+            });
+
+            // Muestra el formato seleccionado y asigna 'required'
+            var selectedDiv = document.getElementById(format + '_coords');
+            if (selectedDiv) {
+                selectedDiv.style.display = 'block';
+                selectedDiv.querySelectorAll('input:not([type="hidden"]), select').forEach(function(input) {
+                    input.setAttribute('required', 'required'); // Poner required a los activos
+                });
+            }
+
+            // Lógica de precarga/conversión de valores
+            const latDdVal = parseFloat(document.getElementById('lat_dd').value);
+            const lonDdVal = parseFloat(document.getElementById('lon_dd').value);
+
+            if (!isNaN(latDdVal) && !isNaN(lonDdVal)) {
+                if (format === 'gms') {
+                    setGMSFromDD(latDdVal, lonDdVal);
+                } else if (format === 'gdm') {
+                    setGDMFromDD(latDdVal, lonDdVal);
+                } else if (format === 'utm') {
+                    setUTMFromDD(latDdVal, lonDdVal);
+                }
+            } else {
+                // Si DD no tiene valores, limpiar los otros formatos
+                clearNonDDInputs();
+            }
+        }
+
+        function setGMSFromDD(lat, lon) {
+            const latG = Math.floor(Math.abs(lat));
+            const latM = Math.floor((Math.abs(lat) - latG) * 60);
+            const latS = ((Math.abs(lat) - latG) * 3600) % 60;
+            const latH = lat >= 0 ? 'N' : 'S';
+
+            const lonG = Math.floor(Math.abs(lon));
+            const lonM = Math.floor((Math.abs(lon) - lonG) * 60);
+            const lonS = ((Math.abs(lon) - lonG) * 3600) % 60;
+            const lonH = lon >= 0 ? 'E' : 'W';
+
+            document.querySelector('#gms_coords input[name="lat_g"]').value = latG;
+            document.querySelector('#gms_coords input[name="lat_m"]').value = latM;
+            document.querySelector('#gms_coords input[name="lat_s"]').value = latS.toFixed(3);
+            document.querySelector('#gms_coords select[name="lat_h"]').value = latH;
+
+            document.querySelector('#gms_coords input[name="lon_g"]').value = lonG;
+            document.querySelector('#gms_coords input[name="lon_m"]').value = lonM;
+            document.querySelector('#gms_coords input[name="lon_s"]').value = lonS.toFixed(3);
+            document.querySelector('#gms_coords select[name="lon_h"]').value = lonH;
+        }
+
+        function setGDMFromDD(lat, lon) {
+            const latG = Math.floor(Math.abs(lat));
+            const latM = (Math.abs(lat) - latG) * 60;
+            const latH = lat >= 0 ? 'N' : 'S';
+
+            const lonG = Math.floor(Math.abs(lon));
+            const lonM = (Math.abs(lon) - lonG) * 60;
+            const lonH = lon >= 0 ? 'E' : 'W';
+
+            document.querySelector('#gdm_coords input[name="lat_g_gdm"]').value = latG;
+            document.querySelector('#gdm_coords input[name="lat_m_gdm"]').value = latM.toFixed(3);
+            document.querySelector('#gdm_coords select[name="lat_h_gdm"]').value = latH;
+
+            document.querySelector('#gdm_coords input[name="lon_g_gdm"]').value = lonG;
+            document.querySelector('#gdm_coords input[name="lon_m_gdm"]').value = lonM.toFixed(3);
+            document.querySelector('#gdm_coords select[name="lon_h_gdm"]').value = lonH;
+        }
+
+        function setUTMFromDD(lat, lon) {
+            // Asumiendo que las coordenadas UTM del ANP están en la Zona 13N
+            // EPSG:4326 (WGS84 Lat/Lon) a EPSG:32613 (UTM Zone 13N)
+            const [utmX, utmY] = proj4("EPSG:4326", "EPSG:32613", [lon, lat]); // proj4 usa [lon, lat]
+
+            document.getElementById('utm_x').value = utmX.toFixed(2);
+            document.getElementById('utm_y').value = utmY.toFixed(2);
+        }
+
+        function clearNonDDInputs() {
+            document.querySelectorAll('#gms_coords input, #gms_coords select, #gdm_coords input, #gdm_coords select, #utm_coords input').forEach(input => {
+                if (input.type !== 'hidden') {
+                    input.value = '';
+                }
+            });
+        }
+
+        // Inicializa la visibilidad de los inputs y precarga los valores
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleCoordInputs(); // Esto mostrará el formato DD por defecto y lo rellenará
+            window.hideLoadingSpinner(); // Ocultar el spinner al cargar la página
+        });
+    </script>
+{% endblock %}

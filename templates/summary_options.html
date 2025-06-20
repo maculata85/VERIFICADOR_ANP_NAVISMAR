@@ -1,0 +1,141 @@
+<!-- templates/summary_options.html -->
+{% extends "base.html" %}
+
+{% block title %}Opciones de Resumen{% endblock %}
+
+{% block content %}
+    <h1>Generar Reporte Resumen</h1>
+
+    <form action="{{ url_for('summary_report') }}" method="GET" class="report-form" onsubmit="window.showLoadingSpinner('Generando resumen...');"> {# Añadido onsubmit #}
+        <div class="form-group">
+            <label for="report_type">Tipo de Reporte:</label>
+            <select name="report_type" id="report_type" onchange="toggleDateInputs()">
+                <option value="monthly">Mensual</option>
+                <option value="weekly">Semanal</option>
+                <option value="annual">Anual</option>
+                <option value="total">Total</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="month-group">
+            <label for="month">Mes:</label>
+            <select name="month" id="month">
+                <option value="0">Todos los meses</option>
+                {% for i in range(1, 13) %}
+                    <option value="{{ i }}" {% if i == datetime.datetime.now().month %}selected{% endif %}>
+                        {{ calendar.month_name[i] | capitalize }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group" id="year-group">
+            <label for="year">Año:</label>
+            <select name="year" id="year">
+                <option value="0">Todos los años</option>
+                {% for y in range(current_year - 5, current_year + 2) %} {# Rango de años #}
+                    <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group" id="week-num-group" style="display: none;">
+            <label for="week_num_option">Número de Semana del Mes:</label>
+            <select name="week_num_option" id="week_num_option">
+                <option value="">Seleccione semana</option>
+                {% for i in range(1, 6) %} {# Asumiendo un máximo de 5 semanas por mes #}
+                    <option value="{{ i }}">Semana {{ i }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# NEW: Status Category Filter #}
+        <div class="form-group">
+            <label for="status_category">Filtrar por Estatus:</label>
+            <select name="status_category" id="status_category">
+                <option value="">Todos los Estatus</option>
+                {% for status_id, status_desc in all_status_categories.items() %}
+                    <option value="{{ status_id }}">{{ status_desc }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="button primary-button">Generar Resumen</button>
+    </form>
+
+    <div class="button-group">
+        {# El botón de descarga ahora necesitará JavaScript para construir la URL con los filtros #}
+        <button type="button" class="button secondary-button" onclick="downloadReport('docx')">Descargar Reporte Word</button>
+        {# Nuevo botón para descargar CSV filtrado #}
+        <button type="button" class="button secondary-button" onclick="downloadReport('csv')">Descargar Reporte CSV</button>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        function toggleDateInputs() {
+            var reportType = document.getElementById('report_type').value;
+            var monthGroup = document.getElementById('month-group');
+            var yearGroup = document.getElementById('year-group');
+            var weekNumGroup = document.getElementById('week-num-group');
+
+            monthGroup.style.display = 'block';
+            yearGroup.style.display = 'block';
+            weekNumGroup.style.display = 'none';
+
+            if (reportType === 'weekly') {
+                weekNumGroup.style.display = 'block';
+            } else if (reportType === 'total') {
+                monthGroup.style.display = 'none';
+                yearGroup.style.display = 'none';
+            } else if (reportType === 'annual') {
+                monthGroup.style.display = 'none';
+            }
+        }
+
+        // Llamar en la carga inicial para configurar los inputs correctamente
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleDateInputs();
+            window.hideLoadingSpinner(); // Ocultar el spinner al cargar la página
+        });
+
+        // Function to dynamically build the download URL for DOCX or CSV
+        function downloadReport(format) {
+            var reportType = document.getElementById('report_type').value;
+            var year = document.getElementById('year').value;
+            var month = document.getElementById('month').value;
+            var weekNum = document.getElementById('week_num_option').value;
+            var statusCategory = document.getElementById('status_category').value; 
+
+            let url = '';
+            let spinnerMessage = '';
+
+            if (format === 'docx') {
+                url = `/download_summary_report/${reportType}?`;
+                spinnerMessage = 'Descargando reporte Word...';
+            } else if (format === 'csv') {
+                url = `/download_summary_csv?report_type=${reportType}`; // La ruta de CSV recibe el tipo de reporte en query param
+                spinnerMessage = 'Descargando reporte CSV...';
+            }
+            
+            // Append parameters based on report type for both formats
+            if (reportType === 'monthly' || reportType === 'weekly') {
+                url += `&year=${year}&month=${month}`;
+            }
+            if (reportType === 'weekly') {
+                url += `&week_num_option=${weekNum}`;
+            }
+            if (reportType === 'annual') {
+                url += `&year=${year}`;
+            }
+            // Always append status_category if selected and not empty
+            if (statusCategory) {
+                url += `&status_category=${statusCategory}`;
+            }
+
+            window.showLoadingSpinner(spinnerMessage); // Mostrar spinner al iniciar la descarga
+            window.location.href = url;
+        }
+    </script>
+{% endblock %}

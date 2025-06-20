@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}Registro de Observaciones{% endblock %}
+
+{% block content %}
+    <h1>Registrar Nueva Observación</h1>
+
+    {# Formulario de Registro de Observación - Visible solo para Editores y Administradores #}
+    {% if current_user.has_role('editor') %}
+        <form action="/add_observation" method="POST" onsubmit="return validateForm()">
+            <div class="form-group">
+                <label for="matricula">Matrícula:</label>
+                <input type="text" id="matricula" name="matricula" required list="matricula_suggestions">
+                <datalist id="matricula_suggestions"></datalist>
+            </div>
+            <div class="form-group">
+                <label for="nombre_embarcacion">Nombre de la Embarcación:</label>
+                <input type="text" id="nombre_embarcacion" name="nombre_embarcacion" list="nombre_embarcacion_suggestions">
+                <datalist id="nombre_embarcacion_suggestions"></datalist>
+            </div>
+            <div class="form-group">
+                <label for="nombre_patron">Nombre del Patrón/Capitán (Opcional):</label>
+                <input type="text" id="nombre_patron" name="nombre_patron" list="nombre_patron_suggestions">
+                <datalist id="nombre_patron_suggestions"></datalist>
+            </div>
+            <div class="form-group">
+                <label for="timestamp">Fecha y Hora de Avistamiento:</label>
+                <input type="datetime-local" id="timestamp" name="timestamp">
+            </div>
+
+            <div class="form-group">
+                <label>Formato de Coordenadas:</label>
+                <select id="coord_format" name="coord_format" onchange="toggleCoordInputs()">
+                    <option value="dd">Grados Decimales (DD)</option>
+                    <option value="gms">Grados, Minutos, Segundos (GMS)</option>
+                    <option value="gdm">Grados, Minutos Decimales (GDM)</option>
+                    <option value="utm">UTM (Universal Transverse Mercator)</option>
+                </select>
+            </div>
+
+            <div id="dd_coords" class="coord-inputs">
+                <div class="form-group-inline">
+                    <label for="lat_dd">Latitud (DD):</label>
+                    <input type="number" step="any" id="lat_dd" name="lat_dd" placeholder="Ej. 20.12345">
+                </div>
+                <div class="form-group-inline">
+                    <label for="lon_dd">Longitud (DD):</label>
+                    <input type="number" step="any" id="lon_lon_dd" name="lon_dd" placeholder="Ej. -105.67890">
+                </div>
+            </div>
+
+            <div id="gms_coords" class="coord-inputs" style="display:none;">
+                <label>Latitud (GMS):</label>
+                <div class="form-group-inline">
+                    <input type="number" name="lat_g" placeholder="Grados" min="0" max="90">°
+                    <input type="number" name="lat_m" placeholder="Minutos" min="0" max="59">′
+                    <input type="number" step="any" name="lat_s" placeholder="Segundos" min="0" max="59.999">″
+                    <select name="lat_h">
+                        <option value="N">N</option><option value="S">S</option>
+                    </select>
+                </div>
+                <label>Longitud (GMS):</label>
+                <div class="form-group-inline">
+                    <input type="number" name="lon_g" placeholder="Grados" min="0" max="180">°
+                    <input type="number" name="lon_m" placeholder="Minutos" min="0" max="59">′
+                    <input type="number" step="any" name="lon_s" placeholder="Segundos" min="0" max="59.999">″
+                    <select name="lon_h">
+                        <option value="W">W</option><option value="E">E</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="gdm_coords" class="coord-inputs" style="display:none;">
+                <label>Latitud (GDM):</label>
+                <div class="form-group-inline">
+                    <input type="number" name="lat_g_gdm" placeholder="Grados" min="0" max="90">°
+                    <input type="number" step="any" name="lat_m_gdm" placeholder="Minutos Dec." min="0" max="59.999">′
+                    <select name="lat_h_gdm">
+                        <option value="N">N</option><option value="S">S</option>
+                    </select>
+                </div>
+                <label>Longitud (GDM):</label>
+                <div class="form-group-inline">
+                    <input type="number" name="lon_g_gdm" placeholder="Grados" min="0" max="180">°
+                    <input type="number" step="any" name="lon_m_gdm" placeholder="Minutos Dec." min="0" max="59.999">′
+                    <select name="lon_h_gdm">
+                        <option value="W">W</option><option value="E">E</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="utm_coords" class="coord-inputs" style="display:none;">
+                <div class="form-group-inline">
+                    <label for="utm_x">Coordenada X (UTM):</label>
+                    <input type="number" step="any" id="utm_x" name="utm_x" placeholder="Este (Easting)" >
+                </div>
+                <div class="form-group-inline">
+                    <label for="utm_y">Coordenada Y (UTM):</label>
+                    <input type="number" step="any" id="utm_y" name="utm_y" placeholder="Norte (Northing)" >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="vessel_type">Tipo de Embarcación:</label>
+                <select id="vessel_type" name="vessel_type">
+                    {% for key, value in vessel_types.items() %}
+                        <option value="{{ value.id }}">{{ value.desc }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="status_category">Estatus de Categoría (si está DENTRO del ANP):</label>
+                <select id="status_category" name="status_category">
+                    {% for key, value in status_categories.items() %}
+                        <option value="{{ value.id }}">{{ value.desc }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="notas_adicionales">Notas Adicionales:</label>
+                <textarea id="notas_adicionales" name="notas_adicionales" rows="3"></textarea>
+            </div>
+
+            <button type="submit">Guardar Observación</button>
+        </form>
+    {% else %}
+        <p class="message">Debes tener rol de Editor o Administrador para registrar nuevas observaciones.</p>
+    {% endif %}
+
+    {# Sección de Botones de Navegación Principales - Visible para cualquier usuario autenticado y aprobado #}
+    {% if current_user.is_authenticated and current_user.is_active %}
+        <hr style="margin-top: 30px; margin-bottom: 30px;">
+        <h2>Navegación Principal</h2>
+        <div class="main-action-buttons button-group">
+            <a href="{{ url_for('history') }}" class="button primary-button" onclick="window.showLoadingSpinner('Cargando historial...');">Historial</a>
+            <a href="{{ url_for('summary_options') }}" class="button primary-button" onclick="window.showLoadingSpinner('Cargando opciones de resumen...');">Resumen</a>
+            <a href="{{ url_for('dashboard_stats') }}" class="button primary-button" onclick="window.showLoadingSpinner('Cargando estadísticas...');">Estadísticas</a>
+            {% if current_user.has_role('editor') %} {# Solo editores y administradores pueden importar CSV #}
+                <a href="{{ url_for('upload_csv_to_db') }}" class="button secondary-button" onclick="window.showLoadingSpinner('Cargando página de importación...');">Importar CSV</a>
+            {% endif %}
+            <a href="{{ url_for('download_all_csv') }}" class="button secondary-button" onclick="window.showLoadingSpinner('Preparando descarga CSV...');">Descargar Todas las Observaciones (CSV)</a> 
+            {% if current_user.has_role('admin') %} {# Solo administradores pueden gestionar usuarios #}
+                <a href="{{ url_for('admin_dashboard') }}" class="button primary-button" onclick="window.showLoadingSpinner('Cargando panel de administración...');">Panel de Administrador</a>
+            {% endif %}
+        </div>
+    {% else %}
+        <p class="message">Por favor, inicia sesión para acceder a las funcionalidades del sistema.</p>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+    {# Proj4js para conversiones UTM #}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.min.js"></script>
+    {{ super() }} {# Importa scripts de base.html #}
+    <script>
+        // Configurar Proj4js para UTM Zone 13N si no está ya definido
+        // Asumiendo que la zona UTM para el ANP es 13N (EPSG:32613)
+        if (!proj4.defs["EPSG:32613"]) {
+            proj4.defs("EPSG:32613", "+proj=utm +zone=13 +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
+        }
+        // Definir WGS84 (lat/lon) si no está ya definido
+        if (!proj4.defs["EPSG:4326"]) {
+            proj4.defs("EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs");
+        }
+
+        // Función para mostrar mensajes de error personalizados
+        function showCustomError(message) {
+            // Reutilizamos el modal de confirmación como modal de mensaje
+            const modal = document.getElementById('confirmModal');
+            const modalContent = modal.querySelector('.modal-content');
+            const modalText = modalContent.querySelector('p');
+            const modalButtons = modalContent.querySelector('.modal-buttons');
+            const modalStandaloneButtonContainer = modal.querySelector('.modal-standalone-button-container');
+
+            // Actualizar el texto del modal
+            modalText.textContent = message;
+
+            // Ocultar los botones de Confirmar/Cancelar
+            modalButtons.style.display = 'none';
+            // Mostrar el contenedor del botón "Cerrar"
+            modalStandaloneButtonContainer.style.display = 'block';
+            
+            modal.classList.add('modal-active'); // Mostrar el modal
+        }
+
+        // Función para validar el formulario antes del envío
+        function validateForm() {
+            const coordFormat = document.getElementById('coord_format').value;
+            let isValid = true;
+            let errorMessage = '';
+
+            // Limpiar los atributos 'required' de todos los inputs de coordenadas antes de validar
+            document.querySelectorAll('.coord-inputs input:not([type="hidden"]), .coord-inputs select').forEach(function(input) {
+                input.removeAttribute('required');
+            });
+
+            // Reaplicar 'required' y validar solo para el formato activo
+            const activeCoordDiv = document.getElementById(coordFormat + '_coords');
+            if (activeCoordDiv) {
+                activeCoordDiv.querySelectorAll('input:not([type="hidden"]), select').forEach(function(input) {
+                    input.setAttribute('required', 'required');
+                });
+            }
+
+            switch (coordFormat) {
+                case 'dd':
+                    const latDd = parseFloat(document.getElementById('lat_dd').value);
+                    const lonDd = parseFloat(document.getElementById('lon_dd').value);
+                    if (isNaN(latDd) || latDd < -90 || latDd > 90) {
+                        errorMessage = 'Latitud (DD) debe estar entre -90 y 90.';
+                        isValid = false;
+                    } else if (isNaN(lonDd) || lonDd < -180 || lonDd > 180) {
+                        errorMessage = 'Longitud (DD) debe estar entre -180 y 180.';
+                        isValid = false;
+                    }
+                    break;
+                case 'gms':
+                    const latG = parseInt(document.querySelector('#gms_coords input[name="lat_g"]').value);
+                    const latM = parseInt(document.querySelector('#gms_coords input[name="lat_m"]').value);
+                    const latS = parseFloat(document.querySelector('#gms_coords input[name="lat_s"]').value);
+                    const lonG = parseInt(document.querySelector('#gms_coords input[name="lon_g"]').value);
+                    const lonM = parseInt(document.querySelector('#gms_coords input[name="lon_m"]').value);
+                    const lonS = parseFloat(document.querySelector('#gms_coords input[name="lon_s"]').value);
+
+                    if (isNaN(latG) || latG < 0 || latG > 90 ||
+                        isNaN(latM) || latM < 0 || latM > 59 ||
+                        isNaN(latS) || latS < 0 || latS >= 60) { // Segundos < 60
+                        errorMessage = 'Valores de Latitud (GMS) inválidos. Grados 0-90, Minutos 0-59, Segundos 0-59.999.';
+                        isValid = false;
+                    } else if (isNaN(lonG) || lonG < 0 || lonG > 180 ||
+                               isNaN(lonM) || lonM < 0 || lonM > 59 ||
+                               isNaN(lonS) || lonS < 0 || lonS >= 60) { // Segundos < 60
+                        errorMessage = 'Valores de Longitud (GMS) inválidos. Grados 0-180, Minutos 0-59, Segundos 0-59.999.';
+                        isValid = false;
+                    }
+                    break;
+                case 'gdm':
+                    const latGdmG = parseInt(document.querySelector('#gdm_coords input[name="lat_g_gdm"]').value);
+                    const latGdmM = parseFloat(document.querySelector('#gdm_coords input[name="lat_m_gdm"]').value);
+                    const lonGdmG = parseInt(document.querySelector('#gdm_coords input[name="lon_g_gdm"]').value);
+                    const lonGdmM = parseFloat(document.querySelector('#gdm_coords input[name="lon_m_gdm"]').value);
+
+                    if (isNaN(latGdmG) || latGdmG < 0 || latGdmG > 90 ||
+                        isNaN(latGdmM) || latGdmM < 0 || latGdmM >= 60) { // Minutos decimales < 60
+                        errorMessage = 'Valores de Latitud (GDM) inválidos. Grados 0-90, Minutos Decimales 0-59.999.';
+                        isValid = false;
+                    } else if (isNaN(lonGdmG) || lonGdmG < 0 || lonGdmG > 180 ||
+                               isNaN(lonGdmM) || lonGdmM < 0 || lonGdmM >= 60) { // Minutos decimales < 60
+                        errorMessage = 'Valores de Longitud (GDM) inválidos. Grados 0-180, Minutos Decimales 0-59.999.';
+                        isValid = false;
+                    }
+                    break;
+                case 'utm':
+                    const utmX = parseFloat(document.getElementById('utm_x').value);
+                    const utmY = parseFloat(document.getElementById('utm_y').value);
+                    // Las coordenadas UTM tienen rangos muy grandes, por lo que una validación estricta
+                    // solo por rango es difícil sin conocer la zona.
+                    // Aquí asumimos que no sean NaN y sean números razonables (ej: no cero o valores extremos).
+                    if (isNaN(utmX) || isNaN(utmY) || utmX === 0 || utmY === 0) {
+                        errorMessage = 'Coordenadas UTM (Este y Norte) no pueden estar vacías o ser cero.';
+                        isValid = false;
+                    }
+                    // Considera añadir rangos más específicos si conoces la zona UTM esperada
+                    break;
+            }
+
+            if (!isValid) {
+                showCustomError(errorMessage); // Usar nuestra función de error
+                return false; // Evita el envío del formulario
+            }
+
+            // Si la validación pasa, mostrar el spinner antes de enviar el formulario
+            window.showLoadingSpinner("Guardando observación...");
+            return true; // Permite el envío del formulario
+        }
+
+        // Función para controlar la visibilidad de los inputs de coordenadas
+        function toggleCoordInputs() {
+            var format = document.getElementById('coord_format').value;
+            var coordInputs = document.querySelectorAll('.coord-inputs');
+            
+            // Deshabilita y oculta todos los inputs de coordenadas
+            coordInputs.forEach(function(div) {
+                div.style.display = 'none';
+                div.querySelectorAll('input, select').forEach(function(input) {
+                    input.removeAttribute('required');
+                    input.value = ''; // Limpiar valores cuando se oculta
+                });
+            });
+
+            // Muestra y establece como requeridos los inputs del formato seleccionado
+            var selectedDiv = document.getElementById(format + '_coords');
+            if (selectedDiv) {
+                selectedDiv.style.display = 'block';
+                selectedDiv.querySelectorAll('input:not([type="hidden"]), select').forEach(function(input) {
+                    // Solo los inputs relevantes, no los hidden si los hubiera
+                    input.setAttribute('required', 'required');
+                });
+            }
+        }
+
+        // --- Lógica de autocompletado ---
+        async function fetchSuggestions(query) {
+            if (query.length < 2) { // Solo busca si la consulta tiene al menos 2 caracteres
+                return [];
+            }
+            try {
+                const response = await fetch(`/api/search_suggestions?q=${encodeURIComponent(query)}`);
+                if (!response.ok) {
+                    console.error('Error fetching suggestions:', response.statusText);
+                    return [];
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching suggestions:', error);
+                return [];
+            }
+        }
+
+        function setupDatalist(inputId, datalistId) {
+            const inputElement = document.getElementById(inputId);
+            const datalistElement = document.getElementById(datalistId);
+
+            let debounceTimer;
+            inputElement.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(async () => {
+                    const query = inputElement.value;
+                    const suggestions = await fetchSuggestions(query);
+                    
+                    datalistElement.innerHTML = ''; // Limpiar opciones anteriores
+                    suggestions.forEach(suggestion => {
+                        const option = document.createElement('option');
+                        option.value = suggestion;
+                        datalistElement.appendChild(option);
+                    });
+                }, 300); // Retraso de 300ms
+            });
+        }
+
+        // Inicializa la visibilidad de los inputs y establece la fecha/hora actual al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleCoordInputs();
+            
+            // Establece la fecha y hora actual para el input timestamp
+            const now = new Date();
+            // Formato 'YYYY-MM-DDTHH:MM' esperado por datetime-local
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('timestamp').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+            // Ocultar spinner si la página se carga por primera vez o se refresca (no por submit)
+            window.hideLoadingSpinner();
+
+            // Configurar los campos de autocompletado
+            setupDatalist('matricula', 'matricula_suggestions');
+            setupDatalist('nombre_embarcacion', 'nombre_embarcacion_suggestions');
+            setupDatalist('nombre_patron', 'nombre_patron_suggestions');
+        });
+    </script>
+{% endblock %}

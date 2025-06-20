@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Base de Observaciones{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon"> 
+    {% block head_extra %}{% endblock %} {# Para CSS o JS adicionales por página #}
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='logo_marina.png') }}" alt="Logo de la Marina" class="marina-logo">
+        </div>
+        <div class="header-text-container">
+            <p class="header-line">SECRETARÍA DE MARINA</p>
+            <p class="header-line">UNIDAD DE CAPITANÍAS DE PUERTO Y ASUNTOS MARÍTIMOS</p>
+            <p class="header-line">DIRECCIÓN GENERAL ADJUNTA DE PROTECCIÓN Y CERTIFICACIÓN MARÍTIMA</p>
+            <p class="header-line">DIRECCIÓN DE INSPECCIÓN Y VIGILANCIA MARÍTIMA PESQUERA</p>
+            <p class="header-line">SUBDIRECCIÓN DE INSPECCIÓN Y VIGILANCIA REGIÓN PACIFICO NORTE.</p>
+        </div>
+        
+        {# Sección de Usuario y Navegación de Autenticación #}
+        <nav class="auth-nav">
+            {% if current_user.is_authenticated %}
+                <span class="welcome-message">Bienvenido, {{ current_user.username }}</span>
+                <a href="{{ url_for('user_profile') }}" class="button small-button">Mi Perfil</a> {# Enlace a Mi Perfil #}
+                <a href="{{ url_for('logout') }}" class="button small-button logout-button">Cerrar Sesión</a>
+            {% else %}
+                {# Enlaces para usuarios no autenticados #}
+                <a href="{{ url_for('login') }}" class="button small-button">Iniciar Sesión</a>
+                <a href="{{ url_for('register') }}" class="button small-button secondary-button">Registrarse</a> 
+            {% endif %}
+        </nav>
+    </header>
+
+    <div class="container">
+        {# Mostrar mensajes (éxito/error) de Flask #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="flashes">
+            {% for category, message in messages %}
+              <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    {# Modal de Confirmación Global para ELIMINAR OBSERVACIONES #}
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeObsModalButton">&times;</span> {# Añadido id para especificidad #}
+            <p>¿Estás seguro de que quieres eliminar este elemento?</p>
+            <div class="modal-buttons">
+                <button id="confirmDeleteBtn" class="button delete-button">Confirmar</button>
+                <button id="cancelDeleteBtn" class="button secondary-button">Cancelar</button>
+            </div>
+            {# Contenedor para el botón de cerrar si el modal se usa como mensaje de error #}
+            <div class="modal-standalone-button-container" style="display: none;">
+                <button class="button primary-button standalone" onclick="document.getElementById('confirmModal').classList.remove('modal-active');">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    {# NUEVO MODAL DE CONFIRMACIÓN PARA ELIMINAR USUARIOS #}
+    <div id="userDeleteConfirmModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeUserDeleteModalButton">&times;</span> {# Añadido id para especificidad #}
+            <p>¿Estás seguro de que quieres eliminar al usuario "<strong id="userToDeleteUsername"></strong>"? Esta acción es irreversible.</p>
+            <div class="modal-buttons">
+                <button id="confirmUserDeleteBtn" class="button delete-button">Eliminar Usuario</button>
+                <button id="cancelUserDeleteBtn" class="button secondary-button">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    {# NUEVO: Indicador de carga global #}
+    <div id="loadingSpinner" class="loading-spinner-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p class="loading-message">Cargando...</p>
+    </div>
+
+    <script>
+        console.log("base.html script cargado."); // DEBUG: Confirmar carga
+
+        // Declarar deleteForm y userToDeleteForm en el ámbito global (window)
+        // para que sean accesibles desde cualquier script que extienda base.html
+        window.deleteForm = null; 
+        window.userToDeleteForm = null; 
+        // También la referencia al botón de eliminación deshabilitado (para observaciones)
+        window.currentlyDisabledObservationDeleteButton = null;
+        // Referencia al botón de eliminación deshabilitado (para usuarios)
+        window.currentlyDisabledUserDeleteButton = null;
+
+        // Función global para mostrar el spinner de carga
+        window.showLoadingSpinner = function(message = "Cargando...") {
+            const spinner = document.getElementById('loadingSpinner');
+            const messageElement = spinner.querySelector('.loading-message');
+            messageElement.textContent = message;
+            spinner.style.display = 'flex';
+        };
+
+        // Función global para ocultar el spinner de carga
+        window.hideLoadingSpinner = function() {
+            const spinner = document.getElementById('loadingSpinner');
+            spinner.style.display = 'none';
+        };
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOMContentLoaded disparado en base.html."); // DEBUG: Confirmar DOM ready
+            
+            // Lógica del Modal de Confirmación (para eliminar observaciones)
+            var confirmModal = document.getElementById('confirmModal');
+            var closeObsModalButton = document.getElementById('closeObsModalButton'); 
+            var confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+            var cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+            
+            // Referencia al contenedor de botones standalone en el modal principal
+            const modalStandaloneButtonContainer = confirmModal.querySelector('.modal-standalone-button-container');
+
+            // Función para ocultar el modal de observación y limpiar el formulario
+            function hideObservationModalAndCleanForm() {
+                if (confirmModal) {
+                    confirmModal.classList.remove('modal-active'); // Quitar la clase para ocultar
+                    // Asegurarse de que los botones de Confirmar/Cancelar vuelvan a mostrarse
+                    confirmModal.querySelector('.modal-buttons').style.display = 'flex';
+                    // Y ocultar el botón standalone si estaba visible
+                    modalStandaloneButtonContainer.style.display = 'none';
+                }
+                if (window.deleteForm) {
+                    document.body.removeChild(window.deleteForm); 
+                    window.deleteForm = null; 
+                    console.log("Formulario de observación removido y referencia limpiada.");
+                }
+                // Re-habilitar el botón de observación si hay uno almacenado
+                if (window.currentlyDisabledObservationDeleteButton) {
+                    window.currentlyDisabledObservationDeleteButton.disabled = false;
+                    window.currentlyDisabledObservationDeleteButton = null;
+                    console.log("Botón de eliminación de observación re-habilitado.");
+                }
+            }
+
+            // Se hace global para que pueda ser llamada desde history.html
+            // ¡Importante! Aquí se asume que history.html le pasará 'this' como primer argumento
+            window.showConfirmModal = function(buttonElement, obsId, matriculaRedirect) { // ¡Cambio aquí! Se acepta el elemento del botón
+                console.log("showConfirmModal (observaciones) llamado. ID:", obsId, "Matrícula Redirect:", matriculaRedirect); // DEBUG
+                if (confirmModal) { 
+                    confirmModal.classList.add('modal-active'); // Añadir la clase para mostrar
+                    
+                    // Ocultar el botón standalone si existiera de un uso anterior como mensaje de error
+                    modalStandaloneButtonContainer.style.display = 'none';
+                    // Asegurar que los botones de Confirmar/Cancelar estén visibles
+                    confirmModal.querySelector('.modal-buttons').style.display = 'flex';
+
+                    // Almacenar y deshabilitar el botón que lo activó
+                    if (buttonElement) {
+                        window.currentlyDisabledObservationDeleteButton = buttonElement;
+                        buttonElement.disabled = true;
+                        console.log("Botón de eliminación de observación deshabilitado.");
+                    }
+
+                    // Crear o re-crear el formulario temporal
+                    if (window.deleteForm) { 
+                        console.log("Removiendo formulario de observación anterior del DOM."); // DEBUG
+                        document.body.removeChild(window.deleteForm);
+                    }
+                    window.deleteForm = document.createElement('form'); 
+                    window.deleteForm.action = `/delete_observation/${obsId}`;
+                    window.deleteForm.method = 'POST';
+                    window.deleteForm.style.display = 'none'; 
+
+                    var hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'matricula_redirect';
+                    hiddenInput.value = matriculaRedirect;
+                    window.deleteForm.appendChild(hiddenInput);
+
+                    document.body.appendChild(window.deleteForm);
+                    console.log("Formulario de eliminación de observación creado y añadido al DOM:", window.deleteForm); // DEBUG
+                } else {
+                    console.error("Error: confirmModal no encontrado en showConfirmModal.");
+                }
+            };
+
+
+            if (closeObsModalButton) { 
+                closeObsModalButton.onclick = function() { 
+                    console.log("Cerrando modal de observación por botón X."); // DEBUG
+                    hideObservationModalAndCleanForm();
+                };
+            } else {
+                console.warn("closeObsModalButton no encontrado."); // DEBUG
+            }
+
+            if (cancelDeleteBtn) { 
+                cancelDeleteBtn.onclick = function() {
+                    console.log("Cerrando modal de observación por botón Cancelar."); // DEBUG
+                    hideObservationModalAndCleanForm();
+                };
+            } else {
+                console.warn("cancelDeleteBtn no encontrado."); // DEBUG
+            }
+
+            if (confirmDeleteBtn) { 
+                confirmDeleteBtn.onclick = function() {
+                    console.log("Confirmando eliminación de observación. Intentando enviar formulario."); // DEBUG
+                    if (window.deleteForm) { 
+                        console.log("Enviando formulario de observación:", window.deleteForm); // DEBUG
+                        window.deleteForm.submit(); 
+                        window.showLoadingSpinner("Eliminando observación..."); // Mostrar spinner al enviar
+                    } else {
+                        console.error("Error: window.deleteForm es null al confirmar eliminación de observación. No se puede enviar."); // DEBUG
+                    }
+                    hideObservationModalAndCleanForm(); // Ocultar el modal después del clic
+                };
+            } else {
+                console.warn("confirmDeleteBtn no encontrado."); // DEBUG
+            }
+
+            // Lógica del Modal de Confirmación para ELIMINAR USUARIOS (similar al de observaciones)
+            var userDeleteConfirmModal = document.getElementById('userDeleteConfirmModal');
+            var closeUserDeleteModalButton = userDeleteConfirmModal ? userDeleteConfirmModal.querySelector('.close-button') : null; 
+            var confirmUserDeleteBtn = document.getElementById('confirmUserDeleteBtn');
+            var cancelUserDeleteBtn = document.getElementById('cancelUserDeleteBtn');
+            
+            // Función para ocultar el modal de usuario y limpiar el formulario
+            window.hideUserDeleteModalAndCleanForm = function() { // Hacerla global
+                if (userDeleteConfirmModal) {
+                    userDeleteConfirmModal.classList.remove('modal-active'); // Quitar la clase para ocultar
+                }
+                if (window.userToDeleteForm) {
+                    document.body.removeChild(window.userToDeleteForm); 
+                    window.userToDeleteForm = null; 
+                    console.log("Formulario de usuario removido y referencia limpiada.");
+                }
+                // Re-habilitar el botón si hay uno almacenado
+                if (window.currentlyDisabledUserDeleteButton) { // Renombrado para claridad
+                    window.currentlyDisabledUserDeleteButton.disabled = false;
+                    window.currentlyDisabledUserDeleteButton = null; // Limpiar la referencia
+                    console.log("Botón de eliminación de usuario re-habilitado y referencia limpiada.");
+                }
+            };
+
+            // Esta función se invoca desde el HTML con onclick
+            // ¡Cambio aquí! Se acepta el elemento del botón
+            window.showUserDeleteConfirmModal = function(buttonElement, userId, username) { 
+                console.log("showUserDeleteConfirmModal llamado. ID de usuario:", userId, "Nombre:", username); // DEBUG
+                if (userDeleteConfirmModal) {
+                    userDeleteConfirmModal.classList.add('modal-active'); // Añadir la clase para mostrar
+                    document.getElementById('userToDeleteUsername').textContent = username; 
+                    
+                    // Almacenar y deshabilitar el botón que lo activó
+                    if (buttonElement) {
+                        window.currentlyDisabledUserDeleteButton = buttonElement; // Renombrado para claridad
+                        buttonElement.disabled = true;
+                        console.log("Botón de eliminación de usuario deshabilitado.");
+                    }
+
+                    // Crear o re-crear el formulario temporal
+                    if (window.userToDeleteForm) { 
+                        console.log("Removiendo formulario de usuario anterior del DOM."); // DEBUG
+                        document.body.removeChild(window.userToDeleteForm); 
+                    }
+                    window.userToDeleteForm = document.createElement('form'); 
+                    window.userToDeleteForm.action = `/delete_user/${userId}`; 
+                    window.userToDeleteForm.method = 'POST';
+                    window.userToDeleteForm.style.display = 'none'; 
+                    document.body.appendChild(window.userToDeleteForm);
+                    console.log("Formulario de eliminación de usuario creado y añadido al DOM:", window.userToDeleteForm); // DEBUG
+                } else {
+                    console.error("Error: userDeleteConfirmModal no encontrado en showUserDeleteConfirmModal.");
+                }
+            };
+
+            if (closeUserDeleteModalButton) { 
+                closeUserDeleteModalButton.onclick = function() { 
+                    console.log("Cerrando modal de usuario por botón X."); // DEBUG
+                    window.hideUserDeleteModalAndCleanForm();
+                };
+            } else {
+                console.warn("closeUserDeleteModalButton no encontrado."); // DEBUG
+            }
+
+            if (cancelUserDeleteBtn) { 
+                cancelUserDeleteBtn.onclick = function() {
+                    console.log("Cerrando modal de usuario por botón Cancelar."); // DEBUG
+                    window.hideUserDeleteModalAndCleanForm();
+                };
+            } else {
+                console.warn("cancelUserDeleteBtn no encontrado."); // DEBUG
+            }
+
+            if (confirmUserDeleteBtn) { 
+                confirmUserDeleteBtn.onclick = function() {
+                    console.log("Confirmando eliminación de usuario. Intentando enviar formulario."); // DEBUG
+                    if (window.userToDeleteForm) { 
+                        console.log("Enviando formulario de usuario:", window.userToDeleteForm); // DEBUG
+                        window.userToDeleteForm.submit(); 
+                        window.showLoadingSpinner("Eliminando usuario..."); // Mostrar spinner al enviar
+                    } else {
+                        console.error("Error: window.userToDeleteForm es null al confirmar eliminación. No se puede enviar."); // DEBUG
+                    }
+                    window.hideUserDeleteModalAndCleanForm(); // Siempre ocultar el modal después del clic
+                };
+            } else {
+                console.warn("confirmUserDeleteBtn no encontrado."); // DEBUG
+            }
+
+            // Un solo Event Listener global al documento para cerrar modales al hacer clic fuera
+            document.addEventListener('click', function(event) {
+                // Cierra el modal de observaciones (si está presente y se hace clic en su overlay)
+                if (confirmModal && event.target === confirmModal) { 
+                    console.log("Cerrando modal de observación por clic en overlay."); // DEBUG
+                    hideObservationModalAndCleanForm();
+                }
+                
+                // Cierra el modal de eliminación de usuarios (si está presente y se hace clic en su overlay)
+                var userDeleteConfirmModal = document.getElementById('userDeleteConfirmModal');
+                if (userDeleteConfirmModal && event.target === userDeleteConfirmModal) { 
+                    console.log("Cerrando modal de usuario por clic en overlay."); // DEBUG
+                    // Llama a la función específica para el modal de usuario (definida en admin_users.html o globalmente)
+                    if (typeof window.hideUserDeleteModalAndCleanForm === 'function') {
+                        window.hideUserDeleteModalAndCleanForm();
+                    } else {
+                        // Fallback si la función no está definida (debería estarlo en admin_users.html)
+                        userDeleteConfirmModal.classList.remove('modal-active');
+                        if (window.userToDeleteForm) {
+                            document.body.removeChild(window.userToDeleteForm);
+                            window.userToDeleteForm = null;
+                        }
+                    }
+                }
+            });
+
+            // Ocultar el spinner si la página se recarga (útil para errores o redirecciones)
+            // Se usa window.addEventListener('pageshow') para manejar el historial de navegación (back/forward cache)
+            window.addEventListener('pageshow', function(event) {
+                // Si la página se carga desde la caché de "volver" o "adelante", forzar a ocultar el spinner
+                if (event.persisted) {
+                    window.hideLoadingSpinner();
+                }
+            });
+
+            // Escuchar el evento antes de unload para mostrar el spinner si se está saliendo de la página
+            window.addEventListener('beforeunload', function() {
+                // Este listener se dispara antes de que la página sea descargada.
+                // Es un buen lugar para mostrar el spinner si se va a navegar a otra página.
+                // Sin embargo, si la acción es un submit de formulario, el showLoadingSpinner ya se activó.
+                // Aquí se podría poner un showLoadingSpinner general para navegaciones de enlaces,
+                // pero por simplicidad, confiamos en que el submit ya lo activa.
+                // Para las redirecciones que no son submit, el spinner ya estará oculto por pageshow.
+            });
+        }); // Cierre del DOMContentLoaded listener
+    </script>
+
+    {% block scripts %}{% endblock %} {# Para JS al final del body #}
+</body>
+</html>

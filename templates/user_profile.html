@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Perfil{% endblock %}
+
+{% block content %}
+    <h1>Mi Perfil</h1>
+    <p>Bienvenido, <strong>{{ current_user.username }}</strong>.</p>
+    <p>Tu rol en el sistema es: <strong>{{ current_user.role | capitalize }}</strong>.</p>
+    <p>Estado de la cuenta: 
+        {% if current_user.is_approved %}
+            <span style="color: green; font-weight: bold;">Aprobada</span>
+        {% else %}
+            <span style="color: red; font-weight: bold;">Pendiente de Aprobación</span>
+        {% endif %}
+    </p>
+
+    <div class="button-group" style="margin-top: 30px;">
+        <a href="{{ url_for('change_password') }}" class="button primary-button">Cambiar Contraseña</a>
+        <a href="{{ url_for('index') }}" class="button secondary-button" style="margin-left: 10px;">Volver al Inicio</a>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            window.hideLoadingSpinner(); // Ocultar el spinner al cargar la página
+        });
+    </script>
+{% endblock %}

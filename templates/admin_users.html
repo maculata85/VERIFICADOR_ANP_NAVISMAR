@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Gestionar Usuarios{% endblock %}
+
+{% block content %}
+    <h1>Gestionar Usuarios</h1>
+
+    <div class="user-list">
+        {% if users %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre de Usuario</th>
+                        <th>Aprobado</th>
+                        <th>Rol</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>
+                            {% if user.is_approved %}
+                                <span style="color: green; font-weight: bold;">Sí</span>
+                            {% else %}
+                                <span style="color: red; font-weight: bold;">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {# Se muestra el rol actual capitalizado para mayor legibilidad #}
+                            {{ user.role | capitalize }}
+                        </td>
+                        <td>
+                            <form action="{{ url_for('update_user', user_id=user.id) }}" method="POST" style="display:inline-flex; align-items:center; gap: 5px;" onsubmit="window.showLoadingSpinner('Actualizando usuario...');"> {# Añadido onsubmit #}
+                                {# Dropdown para cambiar el estado de aprobación #}
+                                <select name="is_approved" class="small-select">
+                                    <option value="True" {% if user.is_approved %}selected{% endif %}>Aprobado</option>
+                                    <option value="False" {% if not user.is_approved %}selected{% endif %}>No Aprobado</option>
+                                </select>
+
+                                {# Dropdown para cambiar el rol - ¡Actualizado con nuevos roles! #}
+                                <select name="role" class="small-select">
+                                    <option value="viewer" {% if user.role == 'viewer' %}selected{% endif %}>Visualizador</option>
+                                    <option value="editor" {% if user.role == 'editor' %}selected{% endif %}>Editor</option>
+                                    <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Administrador</option>
+                                </select>
+                                
+                                <button type="submit" class="button primary-button small-button">Actualizar</button>
+                            </form>
+                            
+                            {# Botón de Eliminar Usuario - Solo si no es el usuario actual #}
+                            {% if user.id != current_user.id %}
+                                <button type="button" class="button delete-button small-button" 
+                                        onclick="window.showUserDeleteConfirmModal(this, {{ user.id }}, '{{ user.username }}')"> {# ¡Cambio aquí! Se pasa 'this' #}
+                                    Eliminar
+                                </button>
+                            {% else %}
+                                <span class="button small-button disabled-button">Eliminar</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No hay usuarios registrados.</p>
+        {% endif %}
+    </div>
+
+    <a href="{{ url_for('admin_dashboard') }}" class="button back-button" style="margin-top: 20px;" onclick="window.showLoadingSpinner('Volviendo al panel de admin...');">Volver al Panel de Admin</a> {# Añadido onclick #}
+{% endblock %}
+
+{% block head_extra %}
+    {{ super() }} {# Para mantener cualquier estilo que ya exista en head_extra de base.html #}
+    <style>
+        /* Estilo para el select pequeño en la tabla de usuarios */
+        .small-select {
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-right: 5px; /* Espacio entre selects y botón */
+        }
+        .disabled-button {
+            background-color: #cccccc;
+            color: #666666;
+            cursor: not-allowed;
+            opacity: 0.7;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            display: inline-block;
+            border-radius: 5px;
+            text-decoration: none;
+            text-align: center;
+        }
+    </style>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }} {# Para mantener el script del modal de observaciones de base.html #}
+
+    <script>
+        console.log("admin_users.html script cargado."); // DEBUG: Confirmar carga de script
+
+        // window.userToDeleteForm y window.currentlyDisabledUserDeleteButton se declaran globalmente en base.html
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOMContentLoaded disparado en admin_users.html."); // DEBUG: Confirmar DOM ready
+            window.hideLoadingSpinner(); // Ocultar el spinner al cargar la página
+
+            // La lógica del Modal de Confirmación para ELIMINAR USUARIOS (showUserDeleteConfirmModal, hideUserDeleteModalAndCleanForm)
+            // y sus event listeners para los botones de cerrar (X, Cancelar, Confirmar)
+            // se encuentran DENTRO de base.html para asegurar que son globales y no se duplican.
+            // Aquí solo nos aseguramos de que los botones llamen a esas funciones globales.
+        }); // Cierre del DOMContentLoaded listener
+    </script>
+{% endblock %}

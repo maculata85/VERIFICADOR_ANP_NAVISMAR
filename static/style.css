@@ -1,0 +1,661 @@
+/* General Body and Container Styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5; /* Un gris muy claro, similar al de tu imagen de la Marina */
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh; /* Asegura que el body ocupe al menos toda la altura de la vista */
+}
+
+.container {
+    width: 90%;
+    max-width: 650px; /* Ancho máximo ligeramente aumentado para mejor legibilidad */
+    background-color: #fff;
+    padding: 25px 35px; /* Más padding para un respiro visual */
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); /* Sombra más pronunciada */
+    box-sizing: border-box;
+    margin-bottom: 30px; /* Espacio debajo del contenedor */
+    margin-top: 20px; /* Espacio arriba, debajo del encabezado */
+}
+
+/* Header Styling (Nuevo encabezado de la Marina) */
+.main-header {
+    width: 100%;
+    background-color: #f8f8f8; /* Fondo blanco casi imperceptible */
+    padding: 15px 20px; /* Espaciado interno */
+    display: flex; /* Para alinear el logo y el texto uno al lado del otro */
+    align-items: center; /* Centrar verticalmente los elementos */
+    justify-content: center; /* Centrar el bloque completo horizontalmente */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Sutil sombra para darle profundidad */
+    margin-bottom: 25px; /* Espacio entre el encabezado y el contenido principal */
+    border-bottom: 1px solid #e0e0e0; /* Una pequeña línea divisoria */
+    position: relative; /* Necesario para posicionar el nav de autenticación */
+    flex-wrap: wrap; /* Permitir que los elementos se envuelvan en pantallas pequeñas */
+}
+
+.logo-container {
+    margin-right: 25px; /* Espacio entre el logo y el texto */
+    display: flex;
+    align-items: center;
+}
+
+.marina-logo {
+    height: 90px; /* Ajusta el tamaño del logo según sea necesario */
+    width: auto;
+    /* Filtrar a escala de grises para el logo si es a color y lo quieres monocromático */
+    /* filter: grayscale(100%); */
+}
+
+.header-text-container {
+    text-align: center; /* Centrar el texto dentro de su contenedor */
+    color: #666; /* Color gris oscuro para el texto, similar al de la imagen */
+    line-height: 1.3; /* Espaciado entre líneas para mejor legibilidad */
+}
+
+.header-text-container .header-line {
+    margin: 0; /* Eliminar el margen por defecto de los párrafos */
+    font-size: 0.8em; /* Tamaño de fuente más pequeño para las líneas de dirección */
+    text-transform: uppercase; /* Mayúsculas para todas las líneas */
+    font-weight: normal; /* Asegurar que no sean negrita a menos que se especifique */
+}
+
+.header-text-container .header-line:first-child {
+    font-weight: bold; /* La primera línea suele ser negrita */
+    font-size: 0.9em;
+}
+
+/* Nuevo: Estilos para la navegación de autenticación */
+.auth-nav {
+    position: absolute; 
+    top: 15px;
+    right: 20px;
+    
+    display: flex;
+    flex-wrap: wrap; /* Permite que los elementos pasen a la siguiente línea si no hay espacio */
+    align-items: center;
+    justify-content: flex-end; /* Alinea los elementos a la derecha */
+    gap: 8px; /* Espacio entre los elementos */
+    
+    /* Ajustar para que ocupe más espacio y evitar el desborde */
+    max-width: calc(100% - 200px); /* Ajustado para dar más espacio dinámicamente, restando espacio para el logo y margen */
+    min-width: 250px; /* Un ancho mínimo razonable */
+    text-align: right; 
+    flex-grow: 1; /* Permite que se estire y ocupe el espacio disponible */
+    align-self: flex-end; /* Asegura que se alinee a la derecha si es un elemento flex */
+}
+
+.welcome-message {
+    color: #0056b3;
+    font-weight: bold;
+    font-size: 0.9em;
+    white-space: nowrap; 
+}
+
+.button.small-button {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    width: auto; 
+    display: inline-flex; /* Cambiado a inline-flex para centrar mejor el texto */
+    align-items: center; /* Centra el texto verticalmente */
+    justify-content: center; /* Centra el texto horizontalmente */
+    margin-bottom: 0; 
+    flex-shrink: 0; 
+    box-sizing: border-box; 
+    height: fit-content; 
+    line-height: 1; /* Asegura que el texto no afecte la altura de la línea */
+}
+
+.button.logout-button {
+    background-color: #dc3545; 
+}
+
+.button.logout-button:hover {
+    background-color: #c82333;
+}
+
+
+/* Main Headings */
+h1 {
+    font-size: 2.2em; 
+    color: #0056b3; 
+    text-align: center;
+    margin-bottom: 15px;
+    font-weight: 600; 
+    text-shadow: 0 1px 2px rgba(0,0,0,0.05); 
+}
+
+h2 {
+    font-size: 1.6em; 
+    color: #444;
+    text-align: center;
+    margin-bottom: 25px; 
+    font-weight: 500;
+}
+
+/* Form Styling */
+.form-group {
+    margin-bottom: 18px; 
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #333;
+    font-size: 0.95em;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="datetime-local"],
+.form-group input[type="password"], 
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 12px; 
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+    box-sizing: border-box; 
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group input[type="datetime-local"]:focus,
+.form-group input[type="password"]:focus, 
+.form-group select:focus,
+.form-group input[type="file"]:focus, 
+.form-group textarea:focus {
+    border-color: #007bff; 
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); 
+    outline: none; 
+}
+
+/* Specific styling for coordinate input groups */
+.form-group-inline {
+    display: flex;
+    gap: 10px; 
+    margin-bottom: 15px;
+}
+
+.form-group-inline input[type="number"],
+.form-group-inline select {
+    flex: 1; 
+    min-width: 0; 
+}
+
+.form-group-inline select {
+    flex-basis: auto; 
+    min-width: unset;
+    width: auto; 
+}
+
+/* Checkbox specific styling */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-right: 8px;
+    width: 18px; 
+    height: 18px;
+}
+
+.checkbox-group label {
+    margin-bottom: 0; 
+    font-weight: normal;
+    color: #555;
+}
+
+
+/* Buttons */
+button[type="submit"] {
+    background-color: #28a745; 
+    color: white;
+    padding: 12px 25px; 
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1em;
+    width: 100%;
+    box-sizing: border-box;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-top: 10px; 
+}
+
+button[type="submit"]:hover {
+    background-color: #218838; 
+    transform: translateY(-2px); 
+}
+
+/* Rediseño de .button-group para botones de acción inferiores */
+.button-group {
+    margin-top: 30px; 
+    text-align: center;
+    display: flex; /* Usar flexbox */
+    flex-wrap: wrap; /* Permitir que los botones se envuelvan */
+    justify-content: center; /* Centrar los botones */
+    gap: 10px; /* Espacio entre los botones */
+}
+
+.button {
+    /* Eliminar display: block y width: 100% para que se ajusten a flexbox */
+    display: inline-flex; /* Cambiado a inline-flex para centrar texto y auto-ajuste */
+    align-items: center; /* Centrar verticalmente el texto */
+    justify-content: center; /* Centrar horizontalmente el texto */
+    background-color: #007bff; 
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 1em;
+    width: auto; /* Ancho automático basado en el contenido */
+    min-width: 150px; /* Ancho mínimo para que no sean demasiado pequeños */
+    box-sizing: border-box;
+    margin-bottom: 0; /* Eliminar margen inferior si lo tenían de 'display: block' */
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    flex-grow: 1; /* Permite que los botones crezcan para llenar el espacio */
+    max-width: 250px; /* Limita el crecimiento en pantallas muy anchas */
+    line-height: 1.2; /* Ajusta la altura de línea para que el texto no se corte */
+}
+
+.button.secondary-button {
+    background-color: #6c757d; 
+}
+
+.button.primary-button { 
+    background-color: #007bff;
+    /* margin-top: 20px; Este margen se maneja mejor con gap en button-group */
+    margin-bottom: 0; /* Asegurarse de que no tenga margen inferior indeseado */
+}
+
+.button.primary-button:hover {
+    background-color: #0056b3;
+}
+
+.button.delete-button { 
+    background-color: #dc3545;
+    display: inline-block; 
+    width: auto; 
+    padding: 8px 15px; 
+    font-size: 0.9em;
+    margin-top: 10px;
+}
+
+.button.delete-button:hover {
+    background-color: #c82333;
+}
+
+
+.button:hover {
+    background-color: #0056b3; 
+    transform: translateY(-2px);
+}
+
+.button.secondary-button:hover {
+    background-color: #5a6268; 
+}
+
+
+/* Messages (Flask flash messages) */
+.flashes {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 20px 0;
+}
+
+.flashes li {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.flashes li.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.flashes li.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.flashes li.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
+
+/* Specific styling for map container in history/summary pages */
+.map-container {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 30px;
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background-color: #fdfdfd;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+}
+
+.map-container img {
+    max-width: 100%; 
+    height: auto;
+    border-radius: 5px;
+    border: 1px solid #ddd; 
+}
+
+/* Styling for observation list items */
+.observation-list {
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+
+.observation-item {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.observation-item p {
+    margin: 5px 0;
+    font-size: 0.95em;
+    color: #495057;
+}
+
+.observation-item strong {
+    color: #343a40;
+}
+
+/* Nuevo: Estilos para la tabla de administración de usuarios */
+.user-list table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.user-list th, .user-list td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    vertical-align: middle; 
+}
+
+.user-list th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    color: #333;
+}
+
+.user-list tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.user-list tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Estilos para el formulario de actualización dentro de la tabla */
+.user-list td form {
+    display: flex; 
+    align-items: center; 
+    gap: 5px; 
+    flex-wrap: wrap; 
+}
+
+/* Estilo para los selects pequeños en la tabla de usuarios */
+.user-list td .small-select {
+    padding: 5px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.85em; 
+    flex-grow: 1; 
+    min-width: 80px; 
+}
+
+/* Estilo para los botones pequeños dentro de la tabla */
+.user-list td .button.small-button {
+    padding: 5px 10px; 
+    font-size: 0.8em; 
+    flex-shrink: 0; 
+    margin-bottom: 0; 
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .main-header {
+        flex-direction: column; 
+        text-align: center;
+        padding: 10px;
+    }
+
+    .logo-container {
+        margin-right: 0;
+        margin-bottom: 10px; 
+    }
+
+    .marina-logo {
+        height: 70px; 
+    }
+
+    .header-text-container .header-line {
+        font-size: 0.7em;
+    }
+    .header-text-container .header-line:first-child {
+        font-size: 0.8em;
+    }
+
+    .auth-nav {
+        position: static; 
+        width: 100%; 
+        justify-content: center; 
+        margin-top: 10px;
+        order: 1; 
+        max-width: unset;
+        min-width: unset;
+        text-align: center; 
+        gap: 5px; /* Reducir el gap en móvil para los botones de navegación */
+    }
+    
+    .welcome-message {
+        display: block; 
+        width: 100%; 
+        text-align: center; 
+        margin-bottom: 8px; 
+        white-space: normal; 
+    }
+
+    .button.small-button {
+        flex-basis: auto; 
+        flex-grow: 1; 
+        max-width: 160px; 
+        margin: 4px; 
+    }
+
+    /* Ajuste para los botones de acción inferiores en móvil */
+    .button-group .button {
+        min-width: unset; 
+        width: 100%; 
+        margin-bottom: 8px; 
+        flex-grow: 0; 
+        max-width: unset; 
+    }
+}
+
+/* Smallest screens adjustments */
+@media (max-width: 480px) {
+    .marina-logo {
+        height: 55px; 
+    }
+    .header-text-container .header-line {
+        font-size: 0.65em;
+    }
+    .header-text-container .header-line:first-child {
+        font-size: 0.75em;
+    }
+    h1 {
+        font-size: 1.4em;
+    }
+    h2 {
+        font-size: 1.1em;
+    }
+    .container {
+        padding: 15px;
+    }
+    .button.small-button {
+        max-width: 100%; 
+        margin: 4px 0; 
+    }
+    .button-group .button {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+}
+
+/* --- ESTILOS PARA MODALES --- */
+.modal {
+    display: none; /* Oculto por defecto, con alta prioridad */
+    position: fixed; /* Permanece en su lugar */
+    z-index: 1000; /* Se superpone a todo */
+    left: 0;
+    top: 0;
+    width: 100%; /* Ancho completo */
+    height: 100%; /* Alto completo */
+    overflow: auto; /* Habilitar scroll si es necesario */
+    background-color: rgba(0,0,0,0.6); /* Fondo semi-transparente más oscuro para resaltar */
+    align-items: center; /* Centrar verticalmente */
+    justify-content: center; /* Centrar horizontalmente */
+    opacity: 0; /* Inicialmente transparente para la animación */
+    transition: opacity 0.3s ease-in-out; /* Transición suave para la opacidad */
+}
+
+.modal.modal-active {
+    display: flex; /* Mostrar el modal usando flexbox */
+    opacity: 1; /* Hacerlo visible */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: auto; /* Centrar también con margen automático, complementa flexbox */
+    padding: 30px; /* Más padding para un mejor aspecto */
+    border: 1px solid #888;
+    border-radius: 8px;
+    width: 90%; /* Ajuste para pantallas más pequeñas */
+    max-width: 450px; /* Ancho máximo aumentado ligeramente */
+    text-align: center;
+    position: relative;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3); /* Sombra más pronunciada */
+    transform: translateY(-20px); /* Ligeramente hacia arriba para el efecto de aparición */
+    transition: transform 0.3s ease-out, opacity 0.3s ease-in-out;
+}
+
+/* Animación para el contenido del modal cuando se activa */
+.modal.modal-active .modal-content {
+    transform: translateY(0); /* Vuelve a la posición original */
+    opacity: 1;
+}
+
+.close-button {
+    color: #aaa;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: #333;
+    text-decoration: none;
+}
+
+.modal-buttons {
+    margin-top: 25px; /* Más margen superior */
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Más espacio entre los botones */
+}
+
+.modal-buttons .button,
+.modal-standalone-button-container .button.standalone { /* Aplicar estilos al botón standalone también */
+    width: auto; /* Ajuste de ancho */
+    flex-grow: 0; /* No se estirarán demasiado */
+    min-width: 100px; /* Ancho mínimo para legibilidad */
+}
+
+/* Nuevo estilo para el botón 'Cerrar' cuando es el único botón en un modal (ej. para errores) */
+.modal-standalone-button-container {
+    margin-top: 25px; /* Separación del texto del modal */
+    text-align: center;
+}
+.modal-standalone-button-container .button.standalone {
+    background-color: #007bff; /* Color principal para botón de cerrar */
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+.modal-standalone-button-container .button.standalone:hover {
+    background-color: #0056b3;
+}
+
+/* --- ESTILOS PARA EL LOADING SPINNER --- */
+.loading-spinner-overlay {
+    position: fixed; /* Cubre toda la pantalla */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Fondo oscuro semi-transparente */
+    display: flex; /* Para centrar el spinner y el mensaje */
+    flex-direction: column; /* Spinner y mensaje apilados verticalmente */
+    justify-content: center; /* Centrar verticalmente */
+    align-items: center; /* Centrar horizontalmente */
+    z-index: 2000; /* Asegura que esté por encima de todo */
+    backdrop-filter: blur(3px); /* Efecto de desenfoque en el fondo */
+    -webkit-backdrop-filter: blur(3px); /* Compatibilidad con Safari */
+}
+
+.spinner {
+    border: 8px solid rgba(255, 255, 255, 0.3); /* Círculo exterior (claro) */
+    border-top: 8px solid #007bff; /* Parte superior del círculo (color principal) */
+    border-radius: 50%; /* Hacerlo circular */
+    width: 60px; /* Tamaño del spinner */
+    height: 60px;
+    animation: spin 1s linear infinite; /* Animación de rotación */
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-message {
+    color: white;
+    margin-top: 20px;
+    font-size: 1.2em;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Sombra para mejor legibilidad */
+}
